@@ -10,16 +10,17 @@ import java.util.*;
 
 public class Tokenizer {
 
-    public static String WHITESPACE = " \n\t\r";
     public static String COMPARISON = "=<>!";
-    public static String UNITOPERATORS = ";!=+-*/[]()";
+    public static String UNITOPERATORS = ",;!=+-*/[]()";
     public static List<String> TOKENS = new LinkedList<String>();
     public static List<String> LINES = new LinkedList<String>();
-    public static String currentToken;
     public static Map<String, Integer> tokenNumbers = new HashMap<String, Integer>();
     public static int currentTokenNumber = 0;
 
 
+    /*
+     * Method to initialize tokenNumbers with proper values
+     */
     public static void initializeTokenizer(){
         tokenNumbers.put("program", 1);
         tokenNumbers.put("begin", 2);
@@ -96,7 +97,8 @@ public class Tokenizer {
     }
 
     /*
-     * Precondition: currentTokenNumber is not the EOF token
+     * Precondition: currentToken is not the EOF token
+     * Returns the next token in stream
      */
     public static void nextToken(){
         currentTokenNumber++;
@@ -107,12 +109,11 @@ public class Tokenizer {
      * After that, breakLines() is called
      */
     public static void startTokenizing(String fileName){
-        int i,j,k;
         try {
             String line;
             BufferedReader obj = new BufferedReader(new FileReader(fileName));
 
-            while((line = obj.readLine()) != null) {
+            while(((line = obj.readLine()) != null)) {
                 LINES.add(line);
             }
 
@@ -135,8 +136,16 @@ public class Tokenizer {
     public static void breakLines(){
         for(String line : LINES){
             String[] tempTokens;
-            tempTokens = line.split("\\s+");
-            tokenize(tempTokens);
+            if((!line.trim().isEmpty())){
+                tempTokens = line.split("\\s+");
+                int len = tempTokens.length;
+                if(tempTokens[len-1].equals("end")){
+                    tokenize(tempTokens);
+                    break;
+                }else{
+                    tokenize(tempTokens);
+                }
+            }
         }
         TOKENS.add("EOF");
     }
@@ -163,16 +172,29 @@ public class Tokenizer {
                  * Check for digits
                  */
                 if(Character.isDigit(start)){
-                    while((j < word.length()) && Character.isDigit(word.charAt(j))){
+                    while((j < word.length()) && Character.isDigit(word.charAt(j))) {
+                        if (Character.isDigit(word.charAt(j))) {
+                            if ((j + 1) < word.length()) {
+                                if (Character.isLetter(word.charAt(j + 1))) {
+                                    System.out.println("Error in Tokenizing " + word);
+                                    System.exit(1);
+                                }
+                            }
+                        }
                         j++;
                     }
-                    TOKENS.add(word.substring(i,j));
+                    if(word.substring(i,j).length() <= 8){
+                        TOKENS.add(word.substring(i,j));
+                    }else{
+                        System.out.println("Error in Tokenizing ");
+                        System.exit(1);
+                    }
                 }
                 /*
                  * Check for comparison operators
                  */
                 else if(COMPARISON.contains(String.valueOf(start))){
-                    if(((i + 1) < word.length()) && word.charAt(j) == '='){
+                        if(((i + 1) < word.length()) && word.charAt(j) == '='){
                         j++;
                     }
                     TOKENS.add(word.substring(i,j));
@@ -184,7 +206,7 @@ public class Tokenizer {
                     TOKENS.add(word.substring(i,j));
                 }
                 /*
-                 * Check for reserved keywords or identifiers
+                 * Check for reserved keywords or identifiers and if not then print error message
                  */
                 else{
                     while((j < word.length()) && (!COMPARISON.contains(String.valueOf(word.charAt(j))))
@@ -197,8 +219,8 @@ public class Tokenizer {
                         TOKENS.add(word.substring(i,j));
                     }else if (!checkID(word.substring(i,j))){
                         System.out.println("Error in Tokenizing: " + word.substring(i,j));
+                        System.exit(1);
                     }
-
                 }
                 i = j;
             }
@@ -206,49 +228,32 @@ public class Tokenizer {
     }
 
     /*
-     * Function to print tokens
+     * Function to print tokens by using currentToken() and nextToken()
      */
-    public static void printTokens(){
-        String temp;
-        for (int i = 0; i < TOKENS.size(); i++){
-            temp = TOKENS.get(i);
+    public void printTokens(){
+        String temp="";
+        while(!temp.equals("EOF")){
+            temp = currentToken();
+            nextToken();
             if(tokenNumbers.containsKey(temp)){
-                System.out.println(tokenNumbers.get(temp) + " : " + temp);
+                System.out.println(tokenNumbers.get(temp) + ": " + temp);
             }
             else if(checkID(temp)){
-                System.out.println("32 : " + temp);
+                System.out.println("32" + ": " + temp);
             }
             else{
                 try{
                     int num = Integer.parseInt(temp);
                     if(num >= 0){
-                        System.out.println("31 : " + num);
+                        System.out.println("31" + ":" + temp);
                     }else{
                         System.out.println("Error tokenizing : " + temp);
+                        System.exit(1);
                     }
                 }catch(Exception e){
                     System.out.println(e);
                 }
             }
         }
-    }
-
-    public static void main(String args[])throws IOException{
-        /*
-         * Checks for correct number of input arguments
-         */
-        if(args.length != 1){
-            System.out.println("Enter correct argument");
-        }else{
-            /*
-             * Initialize values for symbols and reserved keywords
-             */
-            initializeTokenizer();
-            /*
-             * Tokenize the Core program
-             */
-            startTokenizing(args[0]);
-        }
-        printTokens();
     }
 }
